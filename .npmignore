@@ -1,0 +1,10 @@
+.next/
+.git/
+.claude/
+.env
+.env.*
+docs/
+node_modules/
+*.tsbuildinfo
+.DS_Store
+.turbo/

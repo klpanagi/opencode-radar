@@ -77,17 +77,28 @@ The parser extracts messages, token usage, tool calls, and cost data from each s
 - [Claude Code](https://docs.anthropic.com/en/docs/claude-code) installed and used at least once (so `~/.claude/projects/` exists)
 - `git` in your `PATH` (optional — required for the Git Activity panel)
 
-### Install
+### Quick Start (recommended)
+
+```bash
+npx @teots/claude-code-insights
+```
+
+That's it. The first run builds the dashboard (~30s), then opens it in your browser. Subsequent runs start instantly.
+
+Custom port:
+
+```bash
+npx @teots/claude-code-insights --port 8080
+```
+
+### From Source
+
+If you prefer to clone and run locally:
 
 ```bash
 git clone https://github.com/ThodorisTsampouris/claude-code-insights.git
 cd claude-code-insights
 npm install
-```
-
-### Run
-
-```bash
 npm run dev
 ```
 
