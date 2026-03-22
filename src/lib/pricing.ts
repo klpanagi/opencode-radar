@@ -34,13 +34,13 @@ export const MODEL_PRICING: Record<string, ModelPricing> = {
     cacheWrite1hPerMTok: 2,
     cacheReadPerMTok: 0.1,
   },
-  // Legacy: Opus 4.0/4.1
+  // Opus 4.0 (2025-05-14)
   "claude-opus-4-20250514": {
-    inputPerMTok: 15,
-    outputPerMTok: 75,
-    cacheWrite5mPerMTok: 18.75,
-    cacheWrite1hPerMTok: 30,
-    cacheReadPerMTok: 1.5,
+    inputPerMTok: 5,
+    outputPerMTok: 25,
+    cacheWrite5mPerMTok: 6.25,
+    cacheWrite1hPerMTok: 10,
+    cacheReadPerMTok: 0.5,
   },
   // Legacy: Sonnet 4.5/4.0
   "claude-sonnet-4-5-20250514": {

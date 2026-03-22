@@ -463,7 +463,7 @@ function analyzeSession(
       currentTurn.assistantMessages++;
       if (msg.cost) currentTurn.cost += msg.cost;
       if (msg.usage) {
-        currentTurn.tokens += msg.usage.inputTokens + msg.usage.outputTokens;
+        currentTurn.tokens += msg.usage.inputTokens + msg.usage.outputTokens + msg.usage.cacheCreationTokens + msg.usage.cacheReadTokens;
       }
       if (msg.toolUse) {
         currentTurn.toolCalls.push(msg.toolUse.name);
@@ -676,7 +676,7 @@ export function getAggregateSpending(days: number = 30): DailySpending[] {
               cacheWrite1h: cacheDetail.ephemeral_1h_input_tokens || 0,
             } : undefined;
             const cost = calculateCost(raw.message.model, usage, detailed);
-            const tokens = usage.inputTokens + usage.outputTokens;
+            const tokens = usage.inputTokens + usage.outputTokens + usage.cacheCreationTokens + usage.cacheReadTokens;
 
             const entry = dailyMap.get(date) || {
               date,

@@ -1,6 +1,6 @@
 {
   "name": "@teots/claude-code-insights",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "description": "Real-time analytics dashboard for Claude Code sessions",
   "keywords": [
     "claude",
@@ -10,6 +10,14 @@
     "developer-tools"
   ],
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ThodorisTsampouris/claude-code-insights.git"
+  },
+  "homepage": "https://github.com/ThodorisTsampouris/claude-code-insights#readme",
+  "bugs": {
+    "url": "https://github.com/ThodorisTsampouris/claude-code-insights/issues"
+  },
   "bin": "bin/cli.js",
   "files": [
     "bin/",
