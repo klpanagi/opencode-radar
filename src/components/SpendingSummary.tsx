@@ -5,6 +5,7 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 
 import type { DailySpending } from "@/lib/types";
 import { ProjectSpending } from "./ProjectSpending";
 import { CostForecast } from "./CostForecast";
+import { WorkPatternHeatmap } from "./WorkPatternHeatmap";
 
 function formatCost(cost: number): string {
   if (cost < 0.01) return `$${cost.toFixed(4)}`;
@@ -174,6 +175,11 @@ export function SpendingSummary({ monthlyBudget }: { monthlyBudget?: number | nu
       {!loading && data.length > 0 && (
         <CostForecast data={data} monthlyBudget={monthlyBudget} />
       )}
+
+      {/* Work Pattern Heatmap */}
+      <div className="rounded-xl border border-[var(--border)] bg-[var(--bg-card)] p-6 mb-5">
+        <WorkPatternHeatmap />
+      </div>
 
       {/* Spending by Project */}
       <div className="rounded-xl border border-[var(--border)] bg-[var(--bg-card)] p-6">
