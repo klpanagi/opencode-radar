@@ -238,21 +238,11 @@ function tokensFromRaw(raw: { input?: number; output?: number; reasoning?: numbe
 
 // ─── Core parsing ─────────────────────────────────────────────────────────────
 
-function parseSessionMessages(sessionId: string): ParsedMessage[] {
-  const db = openDb();
-
-  const msgRows = db
-    .prepare<[string], DbMessage>(
-      "SELECT id, session_id, time_created, data FROM message WHERE session_id = ? ORDER BY time_created ASC"
-    )
-    .all(sessionId);
-
-  const partRows = db
-    .prepare<[string], DbPart>(
-      "SELECT id, message_id, session_id, time_created, data FROM part WHERE session_id = ? ORDER BY time_created ASC"
-    )
-    .all(sessionId);
-
+function buildMessagesFromRows(
+  sessionId: string,
+  msgRows: DbMessage[],
+  partRows: DbPart[]
+): ParsedMessage[] {
   const partsByMsg = new Map<string, DbPart[]>();
   for (const p of partRows) {
     const arr = partsByMsg.get(p.message_id) ?? [];
@@ -346,13 +336,29 @@ function parseSessionMessages(sessionId: string): ParsedMessage[] {
   return parsed;
 }
 
+function parseSessionMessages(sessionId: string): { messages: ParsedMessage[]; parts: DbPart[] } {
+  const db = openDb();
+  const msgRows = db
+    .prepare<[string], DbMessage>(
+      "SELECT id, session_id, time_created, data FROM message WHERE session_id = ? ORDER BY time_created ASC"
+    )
+    .all(sessionId);
+  const partRows = db
+    .prepare<[string], DbPart>(
+      "SELECT id, message_id, session_id, time_created, data FROM part WHERE session_id = ? ORDER BY time_created ASC"
+    )
+    .all(sessionId);
+  return { messages: buildMessagesFromRows(sessionId, msgRows, partRows), parts: partRows };
+}
+
 // ─── Session analysis ────────────────────────────────────────────────────────
 
 function analyzeSession(
   session: DbSession,
   project: DbProject,
   messages: ParsedMessage[],
-  agents: AgentInfo[]
+  agents: AgentInfo[],
+  sessionParts: DbPart[]
 ): SessionSummary {
   const totalTokens = emptyTokens();
   let totalCost = 0;
@@ -369,19 +375,12 @@ function analyzeSession(
   let turnIndex = 0;
   const contextLimit = 200_000;
 
-  const db = openDb();
-
-  const compactionParts = db
-    .prepare<[string], { time_created: number; data: string }>(
-      "SELECT time_created, data FROM part WHERE session_id = ? AND json_extract(data, '$.type') = 'compaction' ORDER BY time_created ASC"
-    )
-    .all(session.id);
-
-  const agentParts = db
-    .prepare<[string], { time_created: number; data: string }>(
-      "SELECT time_created, data FROM part WHERE session_id = ? AND json_extract(data, '$.type') = 'agent' ORDER BY time_created ASC"
-    )
-    .all(session.id);
+  const compactionParts = sessionParts.filter((p) => {
+    try { return (JSON.parse(p.data) as { type?: string }).type === "compaction"; } catch { return false; }
+  });
+  const agentParts = sessionParts.filter((p) => {
+    try { return (JSON.parse(p.data) as { type?: string }).type === "agent"; } catch { return false; }
+  });
 
   for (const p of agentParts) {
     try {
@@ -541,13 +540,29 @@ export function getSessionData(sessionId: string): SessionSummary | null {
     .get(session.project_id);
   if (!project) return null;
 
-  const messages = parseSessionMessages(sessionId);
+  const { messages, parts } = parseSessionMessages(sessionId);
   const childSessions = db
     .prepare<[string], DbSession>("SELECT id, project_id, parent_id, slug, directory, title, version, time_created, time_updated, summary_additions, summary_deletions, summary_files FROM session WHERE parent_id = ? ORDER BY time_created ASC")
     .all(sessionId);
 
+  // Batch-load all child session messages and parts in 2 queries (eliminates N+1)
+  let allChildMsgRows: DbMessage[] = [];
+  let allChildPartRows: DbPart[] = [];
+  if (childSessions.length > 0) {
+    const childIds = childSessions.map((c) => c.id);
+    const placeholders = childIds.map(() => "?").join(",");
+    allChildMsgRows = db
+      .prepare<string[], DbMessage>(`SELECT id, session_id, time_created, data FROM message WHERE session_id IN (${placeholders}) ORDER BY session_id, time_created ASC`)
+      .all(...childIds);
+    allChildPartRows = db
+      .prepare<string[], DbPart>(`SELECT id, message_id, session_id, time_created, data FROM part WHERE session_id IN (${placeholders}) ORDER BY session_id, time_created ASC`)
+      .all(...childIds);
+  }
+
   const agents: AgentInfo[] = childSessions.map((child) => {
-    const childMsgs = parseSessionMessages(child.id);
+    const childMsgRows = allChildMsgRows.filter((m) => m.session_id === child.id);
+    const childPartRows = allChildPartRows.filter((p) => p.session_id === child.id);
+    const childMsgs = buildMessagesFromRows(child.id, childMsgRows, childPartRows);
     const totalTokens = emptyTokens();
     let totalCost = 0;
     let model: string | undefined;
@@ -575,7 +590,7 @@ export function getSessionData(sessionId: string): SessionSummary | null {
     } satisfies AgentInfo;
   });
 
-  return analyzeSession(session, project, messages, agents);
+  return analyzeSession(session, project, messages, agents, parts);
 }
 
 export interface DailySpending {
@@ -675,7 +690,7 @@ export function getActiveSessions(thresholdMinutes = 10): ActiveSession[] {
     .all(cutoffMs);
 
   return sessions.map((session) => {
-    const messages = parseSessionMessages(session.id);
+    const { messages } = parseSessionMessages(session.id);
     let totalCost = 0;
     const totalTokens = emptyTokens();
     const modelCounts: Record<string, number> = {};

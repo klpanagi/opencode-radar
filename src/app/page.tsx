@@ -35,6 +35,7 @@ export default function Dashboard() {
   const [selectedProject, setSelectedProject] = useState<string | null>(null);
   const [selectedSession, setSelectedSession] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [sessionLoading, setSessionLoading] = useState(false);
   const [autoRefresh, setAutoRefresh] = useState(true);
   const [activeTab, setActiveTab] = useState<Tab>("session");
   const [showOnlyBookmarked, setShowOnlyBookmarked] = useState(false);
@@ -47,6 +48,9 @@ export default function Dashboard() {
   // Keep track of selected project/session across refreshes
   const selectedRef = useRef({ project: selectedProject, session: selectedSession });
   selectedRef.current = { project: selectedProject, session: selectedSession };
+
+  // Client-side session cache: avoids re-rendering stale blank state on session switch
+  const sessionCache = useRef(new Map<string, SessionData>());
 
   // Fetch project list - reusable
   const fetchProjects = useCallback(() => {
@@ -76,23 +80,38 @@ export default function Dashboard() {
     return () => clearInterval(interval);
   }, [autoRefresh, fetchProjects]);
 
-  const fetchSession = useCallback(() => {
+  const fetchSession = useCallback((isBackground = false) => {
     if (!selectedSession) return;
+    if (!isBackground) {
+      const cached = sessionCache.current.get(selectedSession);
+      if (cached) {
+        setSession(cached);
+      } else {
+        setSessionLoading(true);
+      }
+    }
     fetch(`/api/sessions?session=${encodeURIComponent(selectedSession)}`)
       .then((r) => r.json())
-      .then((data) => {
-        if (!data.error) setSession(data);
+      .then((data: SessionData | { error: string }) => {
+        if (!("error" in data)) {
+          const cached = sessionCache.current.get(selectedSession);
+          if (!isBackground || !cached || data.lastActivity !== cached.lastActivity) {
+            sessionCache.current.set(selectedSession, data);
+            setSession(data);
+          }
+          setSessionLoading(false);
+        }
       })
-      .catch(() => {});
+      .catch(() => setSessionLoading(false));
   }, [selectedSession]);
 
   useEffect(() => {
-    fetchSession();
+    fetchSession(false);
   }, [fetchSession]);
 
   useEffect(() => {
     if (!autoRefresh) return;
-    const interval = setInterval(fetchSession, 3000);
+    const interval = setInterval(() => fetchSession(true), 3000);
     return () => clearInterval(interval);
   }, [autoRefresh, fetchSession]);
 
@@ -263,6 +282,20 @@ export default function Dashboard() {
           />
         ) : activeTab === "config" ? (
           <ConfigPanel />
+        ) : sessionLoading ? (
+          <div className="space-y-5 animate-pulse">
+            <div className="h-8 w-64 rounded-lg bg-[var(--bg-card)]" />
+            <div className="grid grid-cols-12 gap-5">
+              <div className="col-span-4 h-40 rounded-xl bg-[var(--bg-card)]" />
+              <div className="col-span-8 h-40 rounded-xl bg-[var(--bg-card)]" />
+            </div>
+            <div className="h-24 rounded-xl bg-[var(--bg-card)]" />
+            <div className="h-40 rounded-xl bg-[var(--bg-card)]" />
+            <div className="grid grid-cols-12 gap-5">
+              <div className="col-span-5 h-48 rounded-xl bg-[var(--bg-card)]" />
+              <div className="col-span-7 h-48 rounded-xl bg-[var(--bg-card)]" />
+            </div>
+          </div>
         ) : !session ? (
           <div className="flex h-full items-center justify-center">
             <div className="text-center">
