@@ -1,0 +1,96 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  publish-npm:
+    name: Publish to npm
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          # Configures .npmrc with the registry and auth token
+          registry-url: https://registry.npmjs.org
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Publish
+        # To set up NPM_TOKEN:
+        #   1. Go to https://www.npmjs.com/settings/<your-username>/tokens
+        #   2. Generate a token → type: Automation
+        #   3. Add it to this repo: Settings → Secrets and variables → Actions → New secret
+        #      Name: NPM_TOKEN
+        run: npm publish
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+  build-linux:
+    name: Build Linux (AppImage + deb)
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build Next.js
+        run: npm run build
+
+      - name: Build Electron (Linux)
+        run: npx electron-builder --linux --publish never
+
+      - name: Upload artifacts to release
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          files: |
+            dist-electron/*.AppImage
+            dist-electron/*.deb
+
+  build-mac:
+    name: Build macOS (DMG)
+    runs-on: macos-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build Next.js
+        run: npm run build
+
+      - name: Build Electron (macOS)
+        # identity: null is set in package.json build.mac — skips code signing.
+        # Users on macOS will need to right-click → Open on first launch to bypass
+        # Gatekeeper (unsigned app). For signed builds, add Apple Developer certs
+        # and set CSC_LINK / CSC_KEY_PASSWORD secrets.
+        run: npx electron-builder --mac --publish never
+
+      - name: Upload artifacts to release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist-electron/*.dmg

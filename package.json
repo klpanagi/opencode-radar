@@ -22,6 +22,7 @@
     "dev": "next dev --turbopack -p ${PORT:-3141}",
     "build": "next build",
     "start": "next start -p ${PORT:-3141}",
+    "lint": "next lint",
     "prod": "next build && next start -p ${PORT:-3141}",
     "electron:dev": "concurrently -n next,electron -c cyan,green --kill-others-on-fail \"npm run dev\" \"electron .\"",
     "electron:prod": "npm run build && concurrently -n next,electron -c cyan,green --kill-others-on-fail \"npm run start\" \"electron .\"",
@@ -49,6 +50,7 @@
     ],
     "mac": {
       "category": "public.app-category.developer-tools",
+      "identity": null,
       "target": [
         {
           "target": "dmg",
