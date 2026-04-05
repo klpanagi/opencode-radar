@@ -9,6 +9,7 @@
     "developer-tools"
   ],
   "license": "MIT",
+  "main": "electron/main.js",
   "bin": "bin/cli.js",
   "files": [
     "bin/",
@@ -20,7 +21,58 @@
   "scripts": {
     "dev": "next dev --turbopack -p ${PORT:-3141}",
     "build": "next build",
-    "start": "next start -p ${PORT:-3141}"
+    "start": "next start -p ${PORT:-3141}",
+    "electron:dev": "concurrently -n next,electron -c cyan,green --kill-others-on-fail \"npm run dev\" \"electron .\"",
+    "electron:build": "npm run build && electron-builder --dir",
+    "electron:dist": "npm run build && electron-builder",
+    "electron:dist:mac": "npm run build && electron-builder --mac",
+    "electron:dist:linux": "npm run build && electron-builder --linux",
+    "electron:dist:win": "npm run build && electron-builder --win"
+  },
+  "build": {
+    "appId": "io.opencode.radar",
+    "productName": "OpenCode Radar",
+    "copyright": "Copyright © 2026 klpanagi",
+    "asar": false,
+    "directories": {
+      "output": "dist-electron"
+    },
+    "files": [
+      ".next/**/*",
+      "node_modules/**/*",
+      "electron/**/*",
+      "public/**/*",
+      "package.json",
+      "next.config.ts"
+    ],
+    "mac": {
+      "category": "public.app-category.developer-tools",
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        }
+      ]
+    },
+    "linux": {
+      "target": [
+        {
+          "target": "AppImage"
+        },
+        {
+          "target": "deb"
+        }
+      ],
+      "category": "Development"
+    },
+    "win": {
+      "target": [
+        "nsis"
+      ]
+    }
   },
   "dependencies": {
     "@tailwindcss/postcss": "^4.0.0",
@@ -28,7 +80,7 @@
     "@types/node": "^22.0.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
-    "better-sqlite3": "^11.10.0",
+    "better-sqlite3": "^12.8.0",
     "glob": "^11.0.0",
     "next": "^15.3.0",
     "postcss": "^8.5.0",
@@ -39,6 +91,10 @@
     "typescript": "^5.7.0"
   },
   "devDependencies": {
+    "@electron/rebuild": "^4.0.3",
+    "concurrently": "^9.2.1",
+    "electron": "^41.1.1",
+    "electron-builder": "^26.8.1",
     "eslint": "^9.0.0",
     "eslint-config-next": "^15.3.0"
   }
