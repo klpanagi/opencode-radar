@@ -40,3 +40,4 @@ next-env.d.ts
 
 # Vercel
 .vercel
+src/lib/parser.ts.bak
