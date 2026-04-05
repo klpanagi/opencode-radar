@@ -54,6 +54,16 @@ interface FeedItem {
   success?: boolean;
 }
 
+const TOOL_ICON_MAP: Record<string, { icon: string; color: string }> = {
+  Bash: { icon: "terminal", color: "#fb923c" },
+  Read: { icon: "eye", color: "#60a5fa" },
+  Edit: { icon: "pencil", color: "#a78bfa" },
+  Write: { icon: "plus", color: "#4ade80" },
+  Glob: { icon: "search", color: "#fbbf24" },
+  Grep: { icon: "search", color: "#f472b6" },
+  task: { icon: "agent", color: "#f472b6" },
+};
+
 function buildFeedItems(messages: MessageInfo[]): FeedItem[] {
   const items: FeedItem[] = [];
   let runningCost = 0;
@@ -61,138 +71,55 @@ function buildFeedItems(messages: MessageInfo[]): FeedItem[] {
 
   for (const msg of messages) {
     if (!msg.timestamp) continue;
+    if (msg.isSubagentMessage) continue;
 
-    // Skip meta/sidechain messages
-    if (msg.isSidechain) continue;
-
-    if (msg.type === "user" && msg.content && !msg.content.startsWith("<")) {
+    if (msg.role === "user" && msg.textContent && !msg.textContent.startsWith("<")) {
       items.push({
-        id: msg.uuid,
+        id: msg.id,
         timestamp: msg.timestamp,
         type: "user",
         icon: "user",
         iconColor: "#3b82f6",
         label: "You",
-        detail: msg.content.slice(0, 200),
+        detail: msg.textContent.slice(0, 200),
       });
-    } else if (msg.type === "assistant" && msg.toolUse) {
-      const tool = msg.toolUse.name;
-      const input = msg.toolUse.input || {};
-
-      if (tool === "Agent") {
+    } else if (msg.role === "assistant" && msg.toolCalls.length > 0) {
+      for (const tool of msg.toolCalls) {
+        const { icon, color } = TOOL_ICON_MAP[tool] ?? { icon: "tool", color: "#8888a4" };
+        const isAgent = tool === "task";
         items.push({
-          id: msg.uuid,
+          id: `${msg.id}-${tool}`,
           timestamp: msg.timestamp,
-          type: "agent-spawn",
-          icon: "agent",
-          iconColor: "#f472b6",
-          label: "Agent Spawned",
-          detail: (input.description as string) || (input.prompt as string)?.slice(0, 120) || "Sub-agent",
-          meta: getModelLabel(msg.model),
-          cost: msg.cost,
-        });
-      } else if (tool === "Bash") {
-        const cmd = (input.command as string) || "";
-        items.push({
-          id: msg.uuid,
-          timestamp: msg.timestamp,
-          type: "bash",
-          icon: "terminal",
-          iconColor: "#fb923c",
-          label: "Bash",
-          detail: cmd.length > 120 ? cmd.slice(0, 120) + "..." : cmd,
-          meta: getModelLabel(msg.model),
-          cost: msg.cost,
-        });
-      } else if (tool === "Read") {
-        items.push({
-          id: msg.uuid,
-          timestamp: msg.timestamp,
-          type: "tool",
-          icon: "eye",
-          iconColor: "#60a5fa",
-          label: "Read",
-          detail: shortenPath((input.file_path as string) || ""),
-          cost: msg.cost,
-        });
-      } else if (tool === "Edit") {
-        items.push({
-          id: msg.uuid,
-          timestamp: msg.timestamp,
-          type: "tool",
-          icon: "pencil",
-          iconColor: "#a78bfa",
-          label: "Edit",
-          detail: shortenPath((input.file_path as string) || ""),
-          cost: msg.cost,
-        });
-      } else if (tool === "Write") {
-        items.push({
-          id: msg.uuid,
-          timestamp: msg.timestamp,
-          type: "tool",
-          icon: "plus",
-          iconColor: "#4ade80",
-          label: "Write",
-          detail: shortenPath((input.file_path as string) || ""),
-          cost: msg.cost,
-        });
-      } else if (tool === "Glob") {
-        items.push({
-          id: msg.uuid,
-          timestamp: msg.timestamp,
-          type: "tool",
-          icon: "search",
-          iconColor: "#fbbf24",
-          label: "Glob",
-          detail: (input.pattern as string) || "",
-          cost: msg.cost,
-        });
-      } else if (tool === "Grep") {
-        items.push({
-          id: msg.uuid,
-          timestamp: msg.timestamp,
-          type: "tool",
-          icon: "search",
-          iconColor: "#f472b6",
-          label: "Grep",
-          detail: (input.pattern as string) || "",
-          cost: msg.cost,
-        });
-      } else {
-        items.push({
-          id: msg.uuid,
-          timestamp: msg.timestamp,
-          type: "tool",
-          icon: "tool",
-          iconColor: "#8888a4",
-          label: tool,
+          type: isAgent ? "agent-spawn" : tool === "Bash" ? "bash" : "tool",
+          icon,
+          iconColor: color,
+          label: isAgent ? "Agent Spawned" : tool,
           detail: "",
+          meta: getModelLabel(msg.model),
           cost: msg.cost,
         });
       }
-    } else if (msg.type === "assistant" && msg.content && !msg.toolUse) {
+    } else if (msg.role === "assistant" && msg.toolCalls.length === 0 && msg.textContent) {
       items.push({
-        id: msg.uuid,
+        id: msg.id,
         timestamp: msg.timestamp,
         type: "assistant",
         icon: "claude",
         iconColor: "#a78bfa",
-        label: "Claude",
-        detail: msg.content.slice(0, 200),
+        label: "OpenCode",
+        detail: msg.textContent.slice(0, 200),
         meta: getModelLabel(msg.model),
         cost: msg.cost,
       });
     }
 
-    // Cost tick every $0.50
     if (msg.cost) {
       runningCost += msg.cost;
       const tick = Math.floor(runningCost / 0.5);
       if (tick > lastCostTick) {
         lastCostTick = tick;
         items.push({
-          id: `cost-${msg.uuid}`,
+          id: `cost-${msg.id}`,
           timestamp: msg.timestamp,
           type: "cost-tick",
           icon: "dollar",
@@ -363,9 +290,9 @@ export function LiveFeed({
 
   // Fetch feed data (with content)
   const fetchFeed = useCallback(() => {
-    if (!projectPath || !sessionId) return;
+    if (!sessionId) return;
     fetch(
-      `/api/sessions?project=${encodeURIComponent(projectPath)}&session=${encodeURIComponent(sessionId)}&feed=1`
+      `/api/sessions?session=${encodeURIComponent(sessionId)}&feed=1`
     )
       .then((r) => r.json())
       .then((data) => {
@@ -374,7 +301,7 @@ export function LiveFeed({
         }
       })
       .catch(() => {});
-  }, [projectPath, sessionId]);
+  }, [sessionId]);
 
   useEffect(() => {
     fetchFeed();
@@ -398,7 +325,7 @@ export function LiveFeed({
   const feedItems = buildFeedItems(feedData);
   const lastItem = feedItems[feedItems.length - 1];
 
-  if (!projectPath || !sessionId) return null;
+  if (!sessionId) return null;
 
   // ── Collapsed: small bar at bottom-right ──
   if (mode === "collapsed") {

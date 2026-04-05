@@ -111,10 +111,20 @@ export function calculateCost(model: string, usage: TokenUsage, detailed?: { cac
 }
 
 export function getModelDisplayName(model: string): string {
-  if (model.includes("opus")) return "Opus";
-  if (model.includes("sonnet")) return "Sonnet";
-  if (model.includes("haiku")) return "Haiku";
-  return model;
+  // Strip provider prefix if present (e.g. "claude-sonnet-4-6@default" → "claude-sonnet-4-6")
+  const base = model.includes("@") ? model.split("@")[0] : model;
+  if (base.includes("opus")) return "Opus";
+  if (base.includes("sonnet")) return "Sonnet";
+  if (base.includes("haiku")) return "Haiku";
+  if (base.includes("gpt-4")) return "GPT-4";
+  if (base.includes("gpt-3")) return "GPT-3.5";
+  if (base.includes("gemini")) return "Gemini";
+  if (base.includes("llama")) return "Llama";
+  if (base.includes("deepseek")) return "DeepSeek";
+  if (base.includes("mistral")) return "Mistral";
+  if (base.includes("qwen")) return "Qwen";
+  if (base.includes("glm")) return "GLM";
+  return base.split("-").slice(0, 3).join("-") || model;
 }
 
 export function getModelColor(model: string): string {

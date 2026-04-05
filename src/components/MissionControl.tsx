@@ -65,6 +65,16 @@ const PROJECT_COLORS = [
   "#22d3ee", "#fbbf24", "#f87171", "#34d399", "#a3e635",
 ];
 
+const TOOL_COLORS: Record<string, string> = {
+  Read: "#60a5fa",
+  Edit: "#a78bfa",
+  Write: "#4ade80",
+  Bash: "#fb923c",
+  task: "#f472b6",
+  Glob: "#fbbf24",
+  Grep: "#fbbf24",
+};
+
 function buildMiniItems(sessions: ActiveSession[]): MiniItem[] {
   const items: MiniItem[] = [];
   const colorMap = new Map<string, string>();
@@ -79,68 +89,42 @@ function buildMiniItems(sessions: ActiveSession[]): MiniItem[] {
 
     for (const msg of session.recentMessages) {
       if (!msg.timestamp) continue;
-      if (msg.isSidechain) continue;
+      if (msg.isSubagentMessage) continue;
 
-      if (msg.type === "user" && msg.content && !msg.content.startsWith("<")) {
+      if (msg.role === "user" && msg.textContent && !msg.textContent.startsWith("<")) {
         items.push({
-          id: `${session.sessionId}-${msg.uuid}`,
+          id: `${session.sessionId}-${msg.id}`,
           timestamp: msg.timestamp,
           icon: "user",
           color: "#3b82f6",
           label: "You",
-          detail: msg.content.slice(0, 120),
+          detail: msg.textContent.slice(0, 120),
           projectName: session.projectName,
           projectColor,
         });
-      } else if (msg.type === "assistant" && msg.toolUse) {
-        const tool = msg.toolUse.name;
-        const input = msg.toolUse.input || {};
-        let detail = "";
-        let color = "#fb923c";
-
-        if (tool === "Read") {
-          detail = shortenPath((input.file_path as string) || "");
-          color = "#60a5fa";
-        } else if (tool === "Edit") {
-          detail = shortenPath((input.file_path as string) || "");
-          color = "#a78bfa";
-        } else if (tool === "Write") {
-          detail = shortenPath((input.file_path as string) || "");
-          color = "#4ade80";
-        } else if (tool === "Bash") {
-          const cmd = (input.command as string) || "";
-          detail = cmd.length > 80 ? cmd.slice(0, 80) + "..." : cmd;
-          color = "#fb923c";
-        } else if (tool === "Agent") {
-          detail = (input.description as string) || "Sub-agent";
-          color = "#f472b6";
-        } else if (tool === "Glob" || tool === "Grep") {
-          detail = (input.pattern as string) || "";
-          color = "#fbbf24";
-        } else {
-          detail = "";
-          color = "#8888a4";
+      } else if (msg.role === "assistant" && msg.toolCalls.length > 0) {
+        for (const tool of msg.toolCalls) {
+          const color = TOOL_COLORS[tool] ?? "#8888a4";
+          items.push({
+            id: `${session.sessionId}-${msg.id}-${tool}`,
+            timestamp: msg.timestamp,
+            icon: tool,
+            color,
+            label: tool === "task" ? "Agent" : tool,
+            detail: "",
+            projectName: session.projectName,
+            projectColor,
+            cost: msg.cost,
+          });
         }
-
+      } else if (msg.role === "assistant" && msg.toolCalls.length === 0 && msg.textContent) {
         items.push({
-          id: `${session.sessionId}-${msg.uuid}`,
-          timestamp: msg.timestamp,
-          icon: tool,
-          color,
-          label: tool,
-          detail,
-          projectName: session.projectName,
-          projectColor,
-          cost: msg.cost,
-        });
-      } else if (msg.type === "assistant" && msg.content && !msg.toolUse) {
-        items.push({
-          id: `${session.sessionId}-${msg.uuid}`,
+          id: `${session.sessionId}-${msg.id}`,
           timestamp: msg.timestamp,
           icon: "claude",
           color: "#a78bfa",
-          label: "Claude",
-          detail: msg.content.slice(0, 120),
+          label: "OpenCode",
+          detail: msg.textContent.slice(0, 120),
           projectName: session.projectName,
           projectColor,
           cost: msg.cost,
@@ -149,7 +133,6 @@ function buildMiniItems(sessions: ActiveSession[]): MiniItem[] {
     }
   }
 
-  // Sort by timestamp
   items.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
   return items;
 }
@@ -163,19 +146,16 @@ function SessionCard({ session, color, onSelect }: {
 }) {
   const totalTokens = session.totalTokens.inputTokens + session.totalTokens.outputTokens;
 
-  // Get last meaningful message
   const lastMsg = [...session.recentMessages].reverse().find(
-    (m) => (m.type === "assistant" && (m.toolUse || m.content)) || (m.type === "user" && m.content && !m.content.startsWith("<"))
+    (m) => (m.role === "assistant" && (m.toolCalls.length > 0 || m.textContent)) ||
+           (m.role === "user" && m.textContent && !m.textContent.startsWith("<"))
   );
 
   let lastAction = "";
-  if (lastMsg?.toolUse) {
-    lastAction = lastMsg.toolUse.name;
-    const input = lastMsg.toolUse.input || {};
-    const fp = (input.file_path as string) || (input.command as string) || (input.pattern as string) || "";
-    if (fp) lastAction += `: ${shortenPath(fp).slice(0, 40)}`;
-  } else if (lastMsg?.content) {
-    lastAction = lastMsg.content.slice(0, 50);
+  if (lastMsg?.role === "assistant" && lastMsg.toolCalls.length > 0) {
+    lastAction = lastMsg.toolCalls.join(", ");
+  } else if (lastMsg?.textContent) {
+    lastAction = lastMsg.textContent.slice(0, 50);
   }
 
   return (
@@ -340,7 +320,7 @@ export function MissionControl({ onSelectSession }: {
         <div>
           <h2 className="text-lg font-bold">Mission Control</h2>
           <p className="text-xs text-[var(--text-secondary)]">
-            All active Claude Code sessions in real-time
+            All active OpenCode sessions in real-time
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -399,7 +379,7 @@ export function MissionControl({ onSelectSession }: {
             No active sessions in the last {timeRange} minutes
           </p>
           <p className="mt-1 text-xs text-[var(--text-secondary)]">
-            Start a Claude Code session and it will appear here
+            Start an OpenCode session and it will appear here
           </p>
         </div>
       ) : (

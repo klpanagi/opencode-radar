@@ -42,7 +42,7 @@ export default function Dashboard() {
   const { theme, toggle: toggleTheme } = useTheme();
   const { config: budgetConfig, setConfig: setBudgetConfig, status: budgetStatus, loading: budgetLoading } = useBudget();
   const { bookmarks, toggleBookmark } = useBookmarks();
-  const { data: gitData, loading: gitLoading } = useGitDiff(selectedProject, selectedSession);
+  const { data: gitData, loading: gitLoading } = useGitDiff(selectedSession);
 
   // Keep track of selected project/session across refreshes
   const selectedRef = useRef({ project: selectedProject, session: selectedSession });
@@ -77,14 +77,14 @@ export default function Dashboard() {
   }, [autoRefresh, fetchProjects]);
 
   const fetchSession = useCallback(() => {
-    if (!selectedProject || !selectedSession) return;
-    fetch(`/api/sessions?project=${encodeURIComponent(selectedProject)}&session=${encodeURIComponent(selectedSession)}`)
+    if (!selectedSession) return;
+    fetch(`/api/sessions?session=${encodeURIComponent(selectedSession)}`)
       .then((r) => r.json())
       .then((data) => {
         if (!data.error) setSession(data);
       })
       .catch(() => {});
-  }, [selectedProject, selectedSession]);
+  }, [selectedSession]);
 
   useEffect(() => {
     fetchSession();
@@ -120,11 +120,11 @@ export default function Dashboard() {
         <div className="mb-5 flex items-center justify-between">
           <div>
             <h1 className="text-sm font-bold tracking-tight">
-              <span className="text-[var(--accent-purple)]">Claude Code</span>{" "}
-              <span className="text-[var(--text-primary)]">Insights</span>
+              <span className="text-[var(--accent-purple)]">OpenCode</span>{" "}
+              <span className="text-[var(--text-primary)]">Radar</span>
             </h1>
             <p className="mt-0.5 text-[10px] text-[var(--text-secondary)]">
-              Session analytics dashboard
+              Real-time radar for your sessions
             </p>
           </div>
           {/* Theme toggle */}

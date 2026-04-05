@@ -88,15 +88,14 @@ export function ContextBar({
             className="h-full rounded-full transition-all duration-700"
             style={{ width: `${Math.min(currentPct, 100)}%`, backgroundColor: barColor }}
           />
-          {/* Compaction markers */}
           {compactions.map((c, i) => {
-            const pos = (c.preTokens / contextLimit) * 100;
+            const pos = compactions.length > 1 ? (i / (compactions.length - 1)) * 90 + 5 : 50;
             return (
               <div
                 key={i}
                 className="absolute top-0 h-full w-0.5 bg-[var(--accent-purple)]"
-                style={{ left: `${Math.min(pos, 100)}%` }}
-                title={`Compaction at ${formatTokens(c.preTokens)} tokens`}
+                style={{ left: `${pos}%` }}
+                title={`Compaction #${i + 1} (${c.auto ? "auto" : "manual"})`}
               />
             );
           })}
@@ -168,55 +167,26 @@ export function ContextBar({
             ) : (
               <div className="space-y-2 max-h-[300px] overflow-y-auto pr-1">
                 {compactions.map((c, i) => {
-                  const postTokens = i < compactions.length - 1
-                    ? snapshots.find((s) => new Date(s.timestamp) > new Date(c.timestamp))?.inputTokens
-                    : undefined;
-                  const reduction = postTokens != null ? c.preTokens - postTokens : undefined;
-
                   return (
                     <div
                       key={i}
                       className="rounded-lg border border-[var(--border)] bg-[var(--bg-secondary)] p-4"
                     >
-                      <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
                           <span className="h-2 w-2 rounded-full bg-[var(--accent-purple)]" />
                           <span className="text-xs font-semibold text-[var(--accent-purple)]">
                             Compaction #{i + 1}
                           </span>
                           <span className="rounded bg-[var(--bg-primary)] px-1.5 py-0.5 text-[9px] text-[var(--text-secondary)]">
-                            {c.trigger}
+                            {c.auto ? "auto" : "manual"}
                           </span>
                         </div>
                         <span className="text-[10px] text-[var(--text-secondary)]">
                           {formatFullTime(c.timestamp)}
                         </span>
                       </div>
-                      <div className="grid grid-cols-3 gap-3 text-xs">
-                        <div>
-                          <div className="text-[10px] text-[var(--text-secondary)]">Before</div>
-                          <div className="font-semibold text-[var(--accent-orange)]">
-                            {formatTokens(c.preTokens)}
-                          </div>
-                        </div>
-                        {reduction != null && (
-                          <>
-                            <div>
-                              <div className="text-[10px] text-[var(--text-secondary)]">After</div>
-                              <div className="font-semibold text-[var(--accent-green)]">
-                                {formatTokens(c.preTokens - reduction)}
-                              </div>
-                            </div>
-                            <div>
-                              <div className="text-[10px] text-[var(--text-secondary)]">Freed</div>
-                              <div className="font-semibold text-[var(--accent-blue)]">
-                                {formatTokens(reduction)} ({((reduction / c.preTokens) * 100).toFixed(0)}%)
-                              </div>
-                            </div>
-                          </>
-                        )}
-                      </div>
-                      <div className="mt-2 text-[10px] text-[var(--text-secondary)]">
+                      <div className="mt-1.5 text-[10px] text-[var(--text-secondary)]">
                         After turn #{c.turnIndex}
                       </div>
                     </div>

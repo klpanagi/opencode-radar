@@ -19,11 +19,7 @@ function formatDate(dateStr: string): string {
   return d.toLocaleDateString();
 }
 
-function formatSize(bytes: number): string {
-  if (bytes < 1024) return `${bytes}B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)}KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)}MB`;
-}
+
 
 export function SessionPicker({
   projects,
@@ -139,9 +135,11 @@ export function SessionPicker({
                         </span>
                       </div>
                     </div>
-                    <div className="mt-0.5 text-[10px] text-[var(--text-secondary)]">
-                      {formatSize(session.size)}
-                    </div>
+                    {session.title && (
+                      <div className="mt-0.5 truncate text-[10px] text-[var(--text-secondary)]">
+                        {session.title}
+                      </div>
+                    )}
                   </button>
                 );
               })}

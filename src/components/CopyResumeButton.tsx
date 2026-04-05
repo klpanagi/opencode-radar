@@ -17,8 +17,8 @@ export function CopyResumeButton({
     (e: React.MouseEvent) => {
       e.stopPropagation();
       const cmd = projectRoot
-        ? `cd ${projectRoot} && claude --resume ${sessionId}`
-        : `claude --resume ${sessionId}`;
+        ? `cd ${projectRoot} && opencode -s ${sessionId}`
+        : `opencode -s ${sessionId}`;
       navigator.clipboard
         .writeText(cmd)
         .then(() => {

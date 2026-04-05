@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import type { GitDiffResponse } from "@/lib/types";
 
 export function useGitDiff(
-  projectPath: string | null,
   sessionId: string | null,
 ): { data: GitDiffResponse | null; loading: boolean; error: string | null } {
   const [data, setData] = useState<GitDiffResponse | null>(null);
@@ -12,7 +11,7 @@ export function useGitDiff(
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!projectPath || !sessionId) {
+    if (!sessionId) {
       setData(null);
       return;
     }
@@ -22,7 +21,7 @@ export function useGitDiff(
     setError(null);
 
     fetch(
-      `/api/git-diff?project=${encodeURIComponent(projectPath)}&session=${encodeURIComponent(sessionId)}`,
+      `/api/git-diff?session=${encodeURIComponent(sessionId)}`,
     )
       .then((r) => r.json())
       .then((d) => {
@@ -39,7 +38,7 @@ export function useGitDiff(
         setError("Failed to load git data");
         setLoading(false);
       });
-  }, [projectPath, sessionId]);
+  }, [sessionId]);
 
   return { data, loading, error };
 }

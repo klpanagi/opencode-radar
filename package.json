@@ -1,23 +1,14 @@
 {
-  "name": "@teots/claude-code-insights",
-  "version": "0.1.7",
-  "description": "Real-time analytics dashboard for Claude Code sessions",
+  "name": "opencode-radar",
+  "version": "0.1.0",
+  "description": "Real-time analytics dashboard for OpenCode sessions",
   "keywords": [
-    "claude",
-    "claude-code",
+    "opencode",
     "analytics",
     "dashboard",
     "developer-tools"
   ],
   "license": "MIT",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/ThodorisTsampouris/claude-code-insights.git"
-  },
-  "homepage": "https://github.com/ThodorisTsampouris/claude-code-insights#readme",
-  "bugs": {
-    "url": "https://github.com/ThodorisTsampouris/claude-code-insights/issues"
-  },
   "bin": "bin/cli.js",
   "files": [
     "bin/",
@@ -32,19 +23,20 @@
     "start": "next start -p ${PORT:-3141}"
   },
   "dependencies": {
-    "next": "^15.3.0",
-    "react": "^19.0.0",
-    "react-dom": "^19.0.0",
-    "recharts": "^2.15.0",
-    "chokidar": "^4.0.0",
-    "glob": "^11.0.0",
-    "typescript": "^5.7.0",
+    "@tailwindcss/postcss": "^4.0.0",
+    "@types/better-sqlite3": "^7.6.13",
     "@types/node": "^22.0.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
+    "better-sqlite3": "^11.10.0",
+    "glob": "^11.0.0",
+    "next": "^15.3.0",
+    "postcss": "^8.5.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "recharts": "^2.15.0",
     "tailwindcss": "^4.0.0",
-    "@tailwindcss/postcss": "^4.0.0",
-    "postcss": "^8.5.0"
+    "typescript": "^5.7.0"
   },
   "devDependencies": {
     "eslint": "^9.0.0",

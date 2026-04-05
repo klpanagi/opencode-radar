@@ -3,12 +3,14 @@ export interface TokenUsage {
   outputTokens: number;
   cacheCreationTokens: number;
   cacheReadTokens: number;
+  reasoningTokens: number;
 }
 
 export interface AgentInfo {
   id: string;
   parentSessionId: string;
-  description?: string;
+  title: string;
+  agentName?: string;
   status: "running" | "completed" | "unknown";
   totalCost: number;
   totalTokens: TokenUsage;
@@ -25,16 +27,19 @@ export interface ModelBreakdown {
 }
 
 export interface MessageInfo {
-  uuid: string;
-  type: string;
+  id: string;
+  role: "user" | "assistant";
   timestamp: string;
   model?: string;
+  providerID?: string;
+  agent?: string;
   cost?: number;
   usage?: TokenUsage;
-  toolUse?: { name: string; input?: Record<string, unknown> };
   stopReason?: string;
-  content?: string;
-  isSidechain?: boolean;
+  toolCalls: string[];
+  editedFiles?: string[];
+  isSubagentMessage: boolean;
+  textContent?: string;
 }
 
 export interface FileActivity {
@@ -66,8 +71,7 @@ export interface TimelineEvent {
 
 export interface CompactionEvent {
   timestamp: string;
-  trigger: string;
-  preTokens: number;
+  auto: boolean;
   turnIndex: number;
 }
 
@@ -97,13 +101,16 @@ export interface SessionData {
   compactions: CompactionEvent[];
   contextSnapshots: ContextSnapshot[];
   contextLimit: number;
+  slug: string;
 }
 
 export interface ProjectInfo {
+  id: string;
   path: string;
   name: string;
   root: string | null;
-  sessions: { id: string; file: string; modifiedAt: string; size: number }[];
+  vcs: string | null;
+  sessions: { id: string; title: string; modifiedAt: string; slug: string }[];
 }
 
 export interface DailySpending {
@@ -116,6 +123,7 @@ export interface DailySpending {
 
 export interface ActiveSession {
   sessionId: string;
+  projectId: string;
   projectPath: string;
   projectName: string;
   projectRoot: string | null;
@@ -129,68 +137,13 @@ export interface ActiveSession {
   recentMessages: MessageInfo[];
   agentCount: number;
   activeAgentCount: number;
-}
-
-// ─── Agent & Skill Configuration ────────────────────────────────────────────
-
-export interface AgentDefinition {
-  id: string;
-  name: string;
-  description: string;
-  tools: string[];
-  model?: string;
-  color?: string;
-  prompt: string;
-  source: string;
-  filePath: string;
-  editable: boolean;
-}
-
-export interface SkillDefinition {
-  id: string;
-  name: string;
-  description: string;
-  version?: string;
-  content: string;
-  source: string;
-  filePath: string;
-  editable: boolean;
+  slug: string;
 }
 
 export interface ProjectSpending {
   name: string;
   cost: number;
   sessions: number;
-}
-
-export interface CommandDefinition {
-  id: string;
-  name: string;
-  description: string;
-  argumentHint?: string;
-  allowedTools?: string[];
-  model?: string;
-  disableModelInvocation?: boolean;
-  content: string;
-  source: string;
-  filePath: string;
-  editable: boolean;
-}
-
-export interface HookEntry {
-  type: "command" | "prompt";
-  command?: string;
-  prompt?: string;
-  timeout?: number;
-}
-
-export interface HookDefinition {
-  id: string;
-  event: string;
-  hooks: HookEntry[];
-  matcher?: string;
-  source: string;
-  editable: boolean;
 }
 
 export interface SearchResult {
@@ -200,6 +153,7 @@ export interface SearchResult {
   excerpt: string;
   timestamp: string;
   matchCount: number;
+  slug: string;
 }
 
 export interface GitDiffResponse {
@@ -210,12 +164,4 @@ export interface GitDiffResponse {
   filesChanged: number;
   insertions: number;
   deletions: number;
-}
-
-export interface ClaudeMdFile {
-  path: string;
-  location: "project-root" | "project-claude" | "global";
-  label: string;
-  content: string;
-  exists: boolean;
 }

@@ -138,9 +138,9 @@ export function AgentPanel({ agents }: { agents: AgentInfo[] }) {
                     {agent.id.slice(0, 12)}...
                   </span>
                 </div>
-                {agent.description && (
+                {(agent.title || agent.agentName) && (
                   <p className="mt-1.5 truncate text-xs text-[var(--text-primary)]">
-                    {agent.description}
+                    {agent.agentName ?? agent.title}
                   </p>
                 )}
               </div>
@@ -175,9 +175,9 @@ export function AgentPanel({ agents }: { agents: AgentInfo[] }) {
                 <StatusBadge status={selectedAgent.status} />
                 <span className="font-mono text-xs text-[var(--text-secondary)]">{selectedAgent.id}</span>
               </div>
-              {selectedAgent.description && (
+              {(selectedAgent.title || selectedAgent.agentName) && (
                 <div className="max-h-[200px] overflow-y-auto rounded-lg bg-[var(--bg-primary)] border border-[var(--border)] p-3 text-sm text-[var(--text-primary)] whitespace-pre-wrap">
-                  {selectedAgent.description}
+                  {selectedAgent.agentName ?? selectedAgent.title}
                 </div>
               )}
             </div>
