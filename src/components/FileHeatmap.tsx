@@ -131,7 +131,7 @@ export function FileHeatmap({ files }: { files: FileActivity[] }) {
               <div className="grid grid-cols-3 gap-3">
                 <OperationCard
                   label="Reads"
-                  description="File was read/viewed by Claude"
+                  description="File was read/viewed by OpenCode"
                   count={selectedFile.reads}
                   color="#60a5fa"
                   total={selectedFile.total}
@@ -191,7 +191,7 @@ export function FileHeatmap({ files }: { files: FileActivity[] }) {
                   Read {selectedFile.reads} time{selectedFile.reads !== 1 ? "s" : ""} before making{" "}
                   {selectedFile.edits + selectedFile.writes} modification{selectedFile.edits + selectedFile.writes !== 1 ? "s" : ""}.
                   {selectedFile.reads > (selectedFile.edits + selectedFile.writes) * 2
-                    ? " Claude studied this file carefully before changing it."
+                    ? " OpenCode studied this file carefully before changing it."
                     : " Quick read-then-modify pattern."}
                 </div>
               </div>

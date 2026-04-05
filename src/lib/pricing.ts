@@ -97,7 +97,7 @@ export function calculateCost(model: string, usage: TokenUsage, detailed?: { cac
       (detailed.cacheWrite5m / 1_000_000) * pricing.cacheWrite5mPerMTok +
       (detailed.cacheWrite1h / 1_000_000) * pricing.cacheWrite1hPerMTok;
   } else {
-    // Fallback: assume all cache writes are 5-min (most common in Claude Code)
+    // Fallback: assume all cache writes are 5-min (most common in OpenCode)
     cacheWriteCost = (usage.cacheCreationTokens / 1_000_000) * pricing.cacheWrite5mPerMTok;
   }
 

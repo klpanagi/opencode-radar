@@ -104,7 +104,7 @@ function buildFeedItems(messages: MessageInfo[]): FeedItem[] {
         id: msg.id,
         timestamp: msg.timestamp,
         type: "assistant",
-        icon: "claude",
+        icon: "opencode",
         iconColor: "#a78bfa",
         label: "OpenCode",
         detail: msg.textContent.slice(0, 200),
@@ -141,7 +141,7 @@ function FeedIcon({ icon, color, size = 16 }: { icon: string; color: string; siz
 
   const paths: Record<string, React.ReactNode> = {
     user: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={sw} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />,
-    claude: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={sw} d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z" />,
+    opencode: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={sw} d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z" />,
     terminal: <><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={sw} d="M6 9l6 6" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={sw} d="M6 15l6-6" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={sw} d="M15 15h3" /></>,
     eye: <><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={sw} d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={sw} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></>,
     pencil: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={sw} d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125" />,

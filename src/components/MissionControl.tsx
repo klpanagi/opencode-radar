@@ -121,7 +121,7 @@ function buildMiniItems(sessions: ActiveSession[]): MiniItem[] {
         items.push({
           id: `${session.sessionId}-${msg.id}`,
           timestamp: msg.timestamp,
-          icon: "claude",
+          icon: "opencode",
           color: "#a78bfa",
           label: "OpenCode",
           detail: msg.textContent.slice(0, 120),

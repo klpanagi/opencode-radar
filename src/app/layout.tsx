@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Claude Code Insights",
-  description: "Real-time cost, token, and agent insights for Claude Code sessions",
+  title: "OpenCode Radar",
+  description: "Real-time cost, token, and agent insights for OpenCode sessions",
 };
 
 export default function RootLayout({
