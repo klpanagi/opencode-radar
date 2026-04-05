@@ -1,7 +1,10 @@
 import { NextResponse } from "next/server";
-import { listProjects, getSessionData } from "@/lib/parser";
+import { listProjects, getSessionData, ProjectInfo } from "@/lib/parser";
 
 export const dynamic = "force-dynamic";
+
+const PROJECTS_CACHE_TTL_MS = 10_000;
+let projectsCache: { data: ProjectInfo[]; expiresAt: number } | null = null;
 
 function isValidSessionId(id: string): boolean {
   return /^[A-Za-z0-9_-]{1,128}$/.test(id);
@@ -60,7 +63,12 @@ export async function GET(request: Request) {
   }
 
   try {
+    const now = Date.now();
+    if (projectsCache && projectsCache.expiresAt > now) {
+      return NextResponse.json(projectsCache.data);
+    }
     const projects = listProjects();
+    projectsCache = { data: projects, expiresAt: now + PROJECTS_CACHE_TTL_MS };
     return NextResponse.json(projects);
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Unknown error";
