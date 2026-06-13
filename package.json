@@ -1,6 +1,6 @@
 {
   "name": "opencode-radar",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Real-time analytics dashboard for OpenCode sessions",
   "keywords": [
     "opencode",
