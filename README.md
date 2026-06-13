@@ -10,9 +10,9 @@ OpenCode Radar is a local analytics dashboard for [OpenCode](https://opencode.ai
 
 ---
 
-## Why OpenCode Radar?
-
-OpenCode is powerful, but flying blind on costs adds up fast. Radar gives you the missing layer: a live view of every session, every sub-agent, every model call — with costs read straight from the database so the numbers are always exact. Know your burn rate before your API bill arrives.
+<p align="center">
+  <img src="docs/images/02-mission-control.png" alt="Mission Control: live unified activity feed across all running OpenCode sessions" width="900">
+</p>
 
 ---
 
@@ -32,6 +32,24 @@ npx opencode-radar --rebuild     # force a fresh build
 npx opencode-radar --help        # show all options
 ```
 
+### Desktop App
+
+Prefer a native window? Download the latest build for your platform from [Releases](https://github.com/klpanagi/opencode-radar/releases):
+
+- **Linux** — `OpenCode Radar-*.AppImage` (portable)
+- **macOS** — `OpenCode Radar-*.dmg` (Apple Silicon & Intel)
+- **Windows** — `OpenCode Radar-Setup-*.exe`
+
+To build the desktop app from source:
+
+```bash
+npm install
+npm run electron:dist          # current platform
+npm run electron:dist:linux    # AppImage
+npm run electron:dist:mac      # .dmg
+npm run electron:dist:win      # NSIS installer
+```
+
 ### Prerequisites
 
 - [Node.js](https://nodejs.org/) 18+
@@ -40,9 +58,34 @@ npx opencode-radar --help        # show all options
 
 ---
 
-## ✨ Features
+## Why OpenCode Radar?
 
-### Session Analytics
+OpenCode is powerful, but flying blind on costs adds up fast. Radar gives you the missing layer: a live view of every session, every sub-agent, every model call — with costs read straight from the database so the numbers are always exact. Know your burn rate before your API bill arrives.
+
+---
+
+## 🖥 Mission Control
+
+A live, unified view of every running OpenCode session across all your projects.
+
+<p align="center">
+  <img src="docs/images/02-mission-control.png" alt="Mission Control unified activity feed" width="900">
+</p>
+
+- **One pane of glass** — active sessions, total cost, total tokens, active agents at a glance
+- **Unified activity feed** — user messages, tool calls, and agent spawns from every project merged by time, with per-event cost
+- **Per-session card** — slug, model, message count, agent count, last tool used, and cost-so-far
+- **Resume instantly** — copy `opencode -s <id>` to continue any session from your terminal
+
+---
+
+## 📊 Session Analytics
+
+Per-session deep-dive: cumulative cost, token efficiency, model breakdown, tool usage, file heatmap, and a full conversation timeline.
+
+<p align="center">
+  <img src="docs/images/dashboard.png" alt="Session analytics dashboard with cost chart, context window, and timeline" width="900">
+</p>
 
 | Feature | Description |
 |---|---|
@@ -58,33 +101,49 @@ npx opencode-radar --help        # show all options
 | **Context window** | Progress bar showing fill level, with compaction markers |
 | **Git activity** | Commits made during the session, files changed, lines inserted/deleted |
 
-### 🖥 Mission Control
+---
 
-Live view of every running OpenCode session across all your projects — in one place.
+## 💸 Spending Overview
 
-- Unified activity feed: user messages, tool calls, and agent spawns as they happen
-- Cost and status at a glance for every active session
-- Copy `opencode -s <id>` to resume any session instantly
+Track total cost, see trends, forecast the month, and break down spend by project.
 
-### 📊 Spending Overview
+<p align="center">
+  <img src="docs/images/03-spending.png" alt="Spending overview with daily chart, monthly forecast, and project breakdown" width="900">
+</p>
 
-- Daily spending chart over 7 / 14 / 30 day windows
-- Monthly forecast based on daily average
-- Per-project cost breakdown with percentage share
+- **Daily chart** over 7 / 14 / 30 day windows
+- **Monthly forecast** based on the current daily average, with a progress bar to the projected total
+- **Per-project breakdown** with percentage share and rank
 
-### 💰 Budget Management
+---
 
-- Set daily, weekly, and monthly spending limits
+## 💰 Budget Management
+
+Set daily, weekly, and monthly spending limits. Get notified before you blow past them.
+
+<p align="center">
+  <img src="docs/images/04-budget.png" alt="Budget configuration with daily, weekly, and monthly limits" width="900">
+</p>
+
+- Set daily, weekly, and monthly limits
 - Visual progress meters per budget period
 - Browser notifications when spending hits your threshold
 - Settings persist to `~/.local/share/opencode/insights-config.json`
 
-### 🗂 Session Tools
+---
+
+## 🗂 Session Tools
 
 - **Resume** — copy `opencode -s <id>` to clipboard in one click
 - **Export** — download the full conversation as a Markdown file
 - **Bookmarks** — star sessions to pin them; persists across restarts
 - **Search** — full-text search across all session conversations
+
+---
+
+## 🔒 Privacy
+
+Radar runs entirely on your machine. It reads OpenCode's local SQLite database and performs all processing inside your local Next.js instance. No telemetry. No external requests. No accounts.
 
 ---
 
@@ -108,8 +167,11 @@ npm run dev
 Open [http://localhost:3141](http://localhost:3141).
 
 ```bash
-npm run build   # production build
-npm start       # serve production build
+npm run build              # production build
+npm start                  # serve production build
+npm run electron:dev       # dev with Electron shell
+npm run electron:build     # build unpacked Electron app
+npm run electron:dist      # build platform-specific installer
 ```
 
 ---
@@ -122,13 +184,8 @@ npm start       # serve production build
 | UI | [React](https://react.dev/) 19 + [Tailwind CSS](https://tailwindcss.com/) 4 |
 | Charts | [Recharts](https://recharts.org/) |
 | Database | [better-sqlite3](https://github.com/WiseLibs/better-sqlite3) |
+| Desktop | [Electron](https://www.electronjs.org/) 41 |
 | Language | TypeScript |
-
----
-
-## 🔒 Privacy
-
-Radar runs entirely on your machine. It reads OpenCode's local SQLite database and performs all processing inside your local Next.js instance. No telemetry. No external requests. No accounts.
 
 ---
 

@@ -44,3 +44,6 @@ src/lib/parser.ts.bak
 
 # Electron
 dist-electron/
+
+# Screenshot tooling
+.playwright-mcp/
