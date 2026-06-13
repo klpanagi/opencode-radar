@@ -27,6 +27,7 @@ export function getInsightsDir(): string {
 }
 
 let _db: Database.Database | null = null;
+let _dbPragmasApplied = false;
 
 function openDb(): Database.Database {
   if (_db) return _db;
@@ -35,7 +36,51 @@ function openDb(): Database.Database {
     throw new Error(`OpenCode database not found at ${path}. Have you run opencode at least once?`);
   }
   _db = new Database(path, { readonly: true, fileMustExist: true });
+  applyReadOnlyPragmas(_db);
   return _db;
+}
+
+/**
+ * Apply performance pragmas safe for a read-only connection.
+ *
+ * Notes:
+ * - `journal_mode=WAL` cannot be set on a readonly connection, but the
+ *   underlying OpenCode DB is typically opened in WAL by OpenCode itself,
+ *   which we benefit from when reading (concurrent readers, no shared
+ *   lock). We detect the active mode and surface it in logs.
+ * - `cache_size` is in KB when negative; 64 MiB is a generous page cache
+ *   for analytical workloads.
+ * - `mmap_size` lets SQLite use the OS page cache for hot pages.
+ * - `temp_store=MEMORY` keeps intermediate sort/b-tree buffers off disk.
+ */
+function applyReadOnlyPragmas(db: Database.Database): void {
+  if (_dbPragmasApplied) return;
+  try {
+    // cache_size: -N = N KiB. 64 MiB.
+    db.pragma("cache_size = -65536");
+    // 256 MiB memory-mapped I/O window.
+    db.pragma("mmap_size = 268435456");
+    // Keep temporary structures in RAM.
+    db.pragma("temp_store = MEMORY");
+    // Read-only safety net: prevent accidental writes via this handle.
+    db.pragma("query_only = ON");
+
+    if (process.env.OPENCODE_RADAR_DEBUG) {
+      const journal = db.pragma("journal_mode", { simple: true }) as string;
+      const cacheSize = db.pragma("cache_size", { simple: true });
+      const mmap = db.pragma("mmap_size", { simple: true });
+      console.log(
+        `[opencode-radar] DB pragmas applied: journal_mode=${journal}, cache_size=${cacheSize}, mmap_size=${mmap}`
+      );
+    }
+  } catch (err) {
+    // Pragmas are best-effort; never fail a request because of them.
+    if (process.env.OPENCODE_RADAR_DEBUG) {
+      console.warn("[opencode-radar] failed to apply DB pragmas:", err);
+    }
+  } finally {
+    _dbPragmasApplied = true;
+  }
 }
 
 // ─── Raw DB row types ────────────────────────────────────────────────────────
@@ -528,8 +573,102 @@ export function listProjects(): ProjectInfo[] {
     }));
 }
 
+// ─── Server-side result cache (P2) ────────────────────────────────────────────
+//
+// getSessionData is polled every 3s for whichever session is open. Most of those
+// polls are wasted: nothing changed. We memoize the analyzed SessionSummary
+// keyed by a cheap fingerprint (session.time_updated + max(message.time_created)
+// + aggregated token/cost columns). When the fingerprint is unchanged, we
+// return the cached object — no SQL, no JSON.parse, no analysis.
+
+interface SessionFingerprint {
+  sessionUpdated: number;
+  maxMessageCreated: number;
+  cost: number;
+  tokensIn: number;
+  tokensOut: number;
+}
+
+interface SessionCacheEntry {
+  fingerprint: SessionFingerprint;
+  data: SessionSummary;
+}
+
+const SESSION_CACHE_MAX = 32;
+const sessionCache = new Map<string, SessionCacheEntry>();
+
+function readSessionFingerprint(db: Database.Database, sessionId: string): SessionFingerprint | null {
+  const row = db
+    .prepare<
+      [string],
+      {
+        session_updated: number;
+        max_message_created: number | null;
+        cost: number | null;
+        tokens_in: number | null;
+        tokens_out: number | null;
+      }
+    >(
+      `SELECT s.time_updated AS session_updated,
+              (SELECT MAX(time_created) FROM message WHERE session_id = s.id) AS max_message_created,
+              s.cost AS cost,
+              s.tokens_input AS tokens_in,
+              s.tokens_output AS tokens_out
+       FROM session s
+       WHERE s.id = ?`
+    )
+    .get(sessionId);
+  if (!row) return null;
+  return {
+    sessionUpdated: row.session_updated,
+    maxMessageCreated: row.max_message_created ?? 0,
+    cost: row.cost ?? 0,
+    tokensIn: row.tokens_in ?? 0,
+    tokensOut: row.tokens_out ?? 0,
+  };
+}
+
+function fingerprintEqual(a: SessionFingerprint, b: SessionFingerprint): boolean {
+  return (
+    a.sessionUpdated === b.sessionUpdated &&
+    a.maxMessageCreated === b.maxMessageCreated &&
+    a.cost === b.cost &&
+    a.tokensIn === b.tokensIn &&
+    a.tokensOut === b.tokensOut
+  );
+}
+
+function cacheSessionResult(sessionId: string, fingerprint: SessionFingerprint, data: SessionSummary): void {
+  if (sessionCache.has(sessionId)) sessionCache.delete(sessionId);
+  sessionCache.set(sessionId, { fingerprint, data });
+  // Bound memory: drop oldest until under cap. Map preserves insertion order.
+  while (sessionCache.size > SESSION_CACHE_MAX) {
+    const oldest = sessionCache.keys().next().value;
+    if (oldest === undefined) break;
+    sessionCache.delete(oldest);
+  }
+}
+
 export function getSessionData(sessionId: string): SessionSummary | null {
   const db = openDb();
+
+  // Fast path: fingerprint check before doing any heavy work.
+  const fingerprint = readSessionFingerprint(db, sessionId);
+  if (!fingerprint) return null;
+  const cached = sessionCache.get(sessionId);
+  if (cached && fingerprintEqual(cached.fingerprint, fingerprint)) {
+    // Touch for LRU semantics.
+    sessionCache.delete(sessionId);
+    sessionCache.set(sessionId, cached);
+    return cached.data;
+  }
+
+  const data = buildSessionSummary(db, sessionId);
+  if (data) cacheSessionResult(sessionId, fingerprint, data);
+  return data;
+}
+
+function buildSessionSummary(db: Database.Database, sessionId: string): SessionSummary | null {
   const session = db
     .prepare<[string], DbSession>("SELECT id, project_id, parent_id, slug, directory, title, version, time_created, time_updated, summary_additions, summary_deletions, summary_files FROM session WHERE id = ?")
     .get(sessionId);
@@ -679,6 +818,15 @@ export interface ActiveSession {
   slug: string;
 }
 
+// Per-session cache for getActiveSessions. Same fingerprint model as
+// getSessionData, but kept as a separate map because the result type and
+// the staleness window differ.
+interface ActiveSessionCacheEntry {
+  fingerprint: SessionFingerprint;
+  data: ActiveSession;
+}
+const activeSessionCache = new Map<string, ActiveSessionCacheEntry>();
+
 export function getActiveSessions(thresholdMinutes = 10): ActiveSession[] {
   const db = openDb();
   const cutoffMs = Date.now() - thresholdMinutes * 60 * 1000;
@@ -690,47 +838,67 @@ export function getActiveSessions(thresholdMinutes = 10): ActiveSession[] {
     .all(cutoffMs);
 
   return sessions.map((session) => {
-    const { messages } = parseSessionMessages(session.id);
-    let totalCost = 0;
-    const totalTokens = emptyTokens();
-    const modelCounts: Record<string, number> = {};
-
-    for (const msg of messages) {
-      if (msg.cost) totalCost += msg.cost;
-      if (msg.usage) { totalTokens.inputTokens += msg.usage.inputTokens; totalTokens.outputTokens += msg.usage.outputTokens; totalTokens.cacheCreationTokens += msg.usage.cacheCreationTokens; totalTokens.cacheReadTokens += msg.usage.cacheReadTokens; totalTokens.reasoningTokens += msg.usage.reasoningTokens; }
-      if (msg.model) { const dm = getModelDisplayName(msg.model); modelCounts[dm] = (modelCounts[dm] ?? 0) + 1; }
+    const fingerprint = readSessionFingerprint(db, session.id);
+    const cached = fingerprint ? activeSessionCache.get(session.id) : undefined;
+    if (cached && fingerprint && fingerprintEqual(cached.fingerprint, fingerprint)) {
+      activeSessionCache.delete(session.id);
+      activeSessionCache.set(session.id, cached);
+      return cached.data;
     }
 
-    const primaryModel = Object.entries(modelCounts).sort((a, b) => b[1] - a[1])[0]?.[0] ?? "Unknown";
-    const timestamps = messages.map((m) => m.timestamp).filter(Boolean).sort();
-    const lastActivity = timestamps[timestamps.length - 1] ?? msToIso(session.time_updated);
-    const isActive = new Date(lastActivity).getTime() > cutoffMs;
-    const childCount = (db.prepare<[string], { cnt: number }>("SELECT COUNT(*) as cnt FROM session WHERE parent_id = ?").get(session.id)?.cnt) ?? 0;
-    const activeChildCount = (db.prepare<[string, number], { cnt: number }>("SELECT COUNT(*) as cnt FROM session WHERE parent_id = ? AND time_updated >= ?").get(session.id, cutoffMs)?.cnt) ?? 0;
-    const pName = session.project_name ?? projectName(session.worktree);
-
-    return {
-      sessionId: session.id,
-      projectId: session.project_id,
-      projectPath: session.worktree,
-      projectName: pName,
-      projectRoot: existsSync(session.worktree) ? session.worktree : null,
-      lastActivity,
-      startTime: timestamps[0] ?? msToIso(session.time_created),
-      totalCost,
-      totalTokens,
-      messageCount: messages.length,
-      model: primaryModel,
-      isActive,
-      recentMessages: messages.slice(-30),
-      agentCount: childCount,
-      activeAgentCount: activeChildCount,
-      slug: session.slug,
-    };
+    const result = buildActiveSession(db, session, cutoffMs);
+    if (result && fingerprint) {
+      activeSessionCache.set(session.id, { fingerprint, data: result });
+    }
+    return result;
   }).sort((a, b) => {
     if (a.isActive !== b.isActive) return a.isActive ? -1 : 1;
     return new Date(b.lastActivity).getTime() - new Date(a.lastActivity).getTime();
   });
+}
+
+function buildActiveSession(
+  db: Database.Database,
+  session: DbSession & { worktree: string; project_name: string | null },
+  cutoffMs: number
+): ActiveSession {
+  const { messages } = parseSessionMessages(session.id);
+  let totalCost = 0;
+  const totalTokens = emptyTokens();
+  const modelCounts: Record<string, number> = {};
+
+  for (const msg of messages) {
+    if (msg.cost) totalCost += msg.cost;
+    if (msg.usage) { totalTokens.inputTokens += msg.usage.inputTokens; totalTokens.outputTokens += msg.usage.outputTokens; totalTokens.cacheCreationTokens += msg.usage.cacheCreationTokens; totalTokens.cacheReadTokens += msg.usage.cacheReadTokens; totalTokens.reasoningTokens += msg.usage.reasoningTokens; }
+    if (msg.model) { const dm = getModelDisplayName(msg.model); modelCounts[dm] = (modelCounts[dm] ?? 0) + 1; }
+  }
+
+  const primaryModel = Object.entries(modelCounts).sort((a, b) => b[1] - a[1])[0]?.[0] ?? "Unknown";
+  const timestamps = messages.map((m) => m.timestamp).filter(Boolean).sort();
+  const lastActivity = timestamps[timestamps.length - 1] ?? msToIso(session.time_updated);
+  const isActive = new Date(lastActivity).getTime() > cutoffMs;
+  const childCount = (db.prepare<[string], { cnt: number }>("SELECT COUNT(*) as cnt FROM session WHERE parent_id = ?").get(session.id)?.cnt) ?? 0;
+  const activeChildCount = (db.prepare<[string, number], { cnt: number }>("SELECT COUNT(*) as cnt FROM session WHERE parent_id = ? AND time_updated >= ?").get(session.id, cutoffMs)?.cnt) ?? 0;
+  const pName = session.project_name ?? projectName(session.worktree);
+
+  return {
+    sessionId: session.id,
+    projectId: session.project_id,
+    projectPath: session.worktree,
+    projectName: pName,
+    projectRoot: existsSync(session.worktree) ? session.worktree : null,
+    lastActivity,
+    startTime: timestamps[0] ?? msToIso(session.time_created),
+    totalCost,
+    totalTokens,
+    messageCount: messages.length,
+    model: primaryModel,
+    isActive,
+    recentMessages: messages.slice(-30),
+    agentCount: childCount,
+    activeAgentCount: activeChildCount,
+    slug: session.slug,
+  };
 }
 
 export interface SearchResult {
