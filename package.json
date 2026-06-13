@@ -9,6 +9,10 @@
     "developer-tools"
   ],
   "license": "MIT",
+  "author": {
+    "name": "klpanagi",
+    "email": "noreply@opencode-radar.local"
+  },
   "main": "electron/main.js",
   "bin": "bin/cli.js",
   "files": [
@@ -65,9 +69,6 @@
       "target": [
         {
           "target": "AppImage"
-        },
-        {
-          "target": "deb"
         }
       ],
       "category": "Development"
