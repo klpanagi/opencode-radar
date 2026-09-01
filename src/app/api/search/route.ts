@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { searchSessions } from "@/lib/parser";
+import { dbMissingResponse, isDbMissing } from "@/lib/api";
 
 export const dynamic = "force-dynamic";
 
@@ -15,6 +16,7 @@ export async function GET(request: Request) {
     const results = searchSessions(q, limit);
     return NextResponse.json(results);
   } catch (err) {
+    if (isDbMissing(err)) return dbMissingResponse();
     const msg = err instanceof Error ? err.message : "Unknown error";
     return NextResponse.json({ error: msg }, { status: 500 });
   }

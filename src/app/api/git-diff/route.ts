@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { promisify } from "util";
 import { execFile as execFileCb } from "child_process";
 import { getSessionData } from "@/lib/parser";
+import { dbMissingPayload, isDbMissing } from "@/lib/api";
 
 export const dynamic = "force-dynamic";
 
@@ -40,6 +41,9 @@ export async function GET(request: Request) {
   try {
     sessionData = getSessionData(sessionId);
   } catch (err) {
+    if (isDbMissing(err)) {
+      return NextResponse.json({ ...EMPTY, supported: false, ...dbMissingPayload() }, { status: 503 });
+    }
     const msg = err instanceof Error ? err.message : "Unknown error";
     return NextResponse.json({ ...EMPTY, supported: false, error: msg });
   }

@@ -27,6 +27,17 @@ import { CopyResumeButton } from "@/components/CopyResumeButton";
 import { ExportButton } from "@/components/ExportButton";
 import { GitDiffPanel } from "@/components/GitDiffPanel";
 
+interface DbMissingInfo {
+  error: string;
+  dbPath: string;
+  hint: string;
+}
+
+function isDbMissingInfo(data: unknown): data is DbMissingInfo {
+  if (typeof data !== "object" || data === null) return false;
+  const d = data as { error?: unknown; dbPath?: unknown; hint?: unknown };
+  return typeof d.error === "string" && typeof d.dbPath === "string" && typeof d.hint === "string";
+}
 type Tab = "session" | "spending" | "live" | "budget" | "config";
 
 export default function Dashboard() {
@@ -39,6 +50,7 @@ export default function Dashboard() {
   const [autoRefresh, setAutoRefresh] = useState(true);
   const [activeTab, setActiveTab] = useState<Tab>("session");
   const [showOnlyBookmarked, setShowOnlyBookmarked] = useState(false);
+  const [dbMissing, setDbMissing] = useState<DbMissingInfo | null>(null);
 
   const { theme, toggle: toggleTheme } = useTheme();
   const { config: budgetConfig, setConfig: setBudgetConfig, status: budgetStatus, loading: budgetLoading } = useBudget();
@@ -56,12 +68,23 @@ export default function Dashboard() {
   const fetchProjects = useCallback(() => {
     fetch("/api/sessions")
       .then((r) => r.json())
-      .then((data: ProjectInfo[]) => {
-        setProjects(data);
+      .then((data: unknown) => {
+        if (isDbMissingInfo(data)) {
+          setDbMissing(data);
+          setProjects([]);
+          setLoading(false);
+          return;
+        }
+        if (!Array.isArray(data)) {
+          setLoading(false);
+          return;
+        }
+        const list = data as ProjectInfo[];
+        setProjects(list);
         // Auto-select first session only on initial load (no selection yet)
-        if (data.length > 0 && data[0].sessions.length > 0 && !selectedRef.current.project) {
-          setSelectedProject(data[0].path);
-          setSelectedSession(data[0].sessions[0].id);
+        if (list.length > 0 && list[0].sessions.length > 0 && !selectedRef.current.project) {
+          setSelectedProject(list[0].path);
+          setSelectedSession(list[0].sessions[0].id);
         }
         setLoading(false);
       })
@@ -75,13 +98,13 @@ export default function Dashboard() {
 
   // Auto-refresh project list every 5 seconds to detect new sessions
   useEffect(() => {
-    if (!autoRefresh) return;
+    if (!autoRefresh || dbMissing) return;
     const interval = setInterval(fetchProjects, 5000);
     return () => clearInterval(interval);
-  }, [autoRefresh, fetchProjects]);
+  }, [autoRefresh, fetchProjects, dbMissing]);
 
   const fetchSession = useCallback((isBackground = false) => {
-    if (!selectedSession) return;
+    if (!selectedSession || dbMissing) return;
     if (!isBackground) {
       const cached = sessionCache.current.get(selectedSession);
       if (cached) {
@@ -92,7 +115,12 @@ export default function Dashboard() {
     }
     fetch(`/api/sessions?session=${encodeURIComponent(selectedSession)}`)
       .then((r) => r.json())
-      .then((data: SessionData | { error: string }) => {
+      .then((data: SessionData | { error: string } | DbMissingInfo) => {
+        if (isDbMissingInfo(data)) {
+          setDbMissing(data);
+          setSessionLoading(false);
+          return;
+        }
         if (!("error" in data)) {
           const cached = sessionCache.current.get(selectedSession);
           if (!isBackground || !cached || data.lastActivity !== cached.lastActivity) {
@@ -100,20 +128,23 @@ export default function Dashboard() {
             setSession(data);
           }
           setSessionLoading(false);
+        } else {
+          // Error response (e.g. session not found) - stop the spinner instead of spinning forever.
+          setSessionLoading(false);
         }
       })
       .catch(() => setSessionLoading(false));
-  }, [selectedSession]);
+  }, [selectedSession, dbMissing]);
 
   useEffect(() => {
     fetchSession(false);
   }, [fetchSession]);
 
   useEffect(() => {
-    if (!autoRefresh) return;
+    if (!autoRefresh || dbMissing) return;
     const interval = setInterval(() => fetchSession(true), 3000);
     return () => clearInterval(interval);
-  }, [autoRefresh, fetchSession]);
+  }, [autoRefresh, fetchSession, dbMissing]);
 
   const handleSelect = (projectPath: string, sessionId: string) => {
     setSelectedProject(projectPath);
@@ -263,6 +294,28 @@ export default function Dashboard() {
 
       {/* Main content */}
       <div className="flex-1 overflow-y-auto p-6">
+        {dbMissing && (
+          <div className="mb-5 rounded-xl border border-[var(--accent-orange)] bg-[var(--bg-card)] p-5">
+            <div className="flex items-start gap-3">
+              <svg className="mt-0.5 h-6 w-6 shrink-0 text-[var(--accent-orange)]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+              </svg>
+              <div className="min-w-0">
+                <h2 className="text-sm font-bold text-[var(--accent-orange)]">OpenCode database not found</h2>
+                <p className="mt-1 text-xs text-[var(--text-secondary)]">{dbMissing.error}</p>
+                <p className="mt-2 break-all font-mono text-[10px] text-[var(--text-secondary)]">{dbMissing.dbPath}</p>
+                <p className="mt-2 text-xs text-[var(--text-primary)]">{dbMissing.hint}</p>
+                <button
+                  onClick={() => window.location.reload()}
+                  className="mt-3 rounded-lg bg-[var(--accent-purple)] px-3 py-1.5 text-[10px] font-medium text-white transition-opacity hover:opacity-80"
+                >
+                  Retry
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {activeTab === "live" ? (
           <MissionControl
             onSelectSession={(projectPath, sessionId) => {

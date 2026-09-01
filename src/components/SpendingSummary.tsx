@@ -74,7 +74,9 @@ export function SpendingSummary({ monthlyBudget }: { monthlyBudget?: number | nu
     fetch(`/api/spending?days=${period}`)
       .then((r) => r.json())
       .then((d) => {
-        setData(d);
+        // A 503 with { error, dbPath, hint } arrives when the OpenCode DB is
+        // missing - never feed it into the chart state.
+        if (Array.isArray(d)) setData(d);
         setLoading(false);
       })
       .catch(() => setLoading(false));

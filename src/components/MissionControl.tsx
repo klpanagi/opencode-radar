@@ -267,7 +267,9 @@ export function MissionControl({ onSelectSession }: {
       fetch(`/api/active?minutes=${timeRange}`)
         .then((r) => r.json())
         .then((data) => {
-          setSessions(data);
+          // A 503 with { error, dbPath, hint } arrives when the OpenCode DB is
+          // missing - never feed it into the sessions state.
+          if (Array.isArray(data)) setSessions(data);
           setLoading(false);
         })
         .catch(() => setLoading(false));

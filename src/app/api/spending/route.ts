@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getAggregateSpending, DailySpending } from "@/lib/parser";
+import { dbMissingResponse, isDbMissing } from "@/lib/api";
 
 export const dynamic = "force-dynamic";
 
@@ -19,7 +20,13 @@ export async function GET(request: Request) {
     return NextResponse.json(spendingCache.data);
   }
 
-  const data = getAggregateSpending(days);
-  spendingCache = { days, data, expiresAt: now + CACHE_TTL_MS };
-  return NextResponse.json(data);
+  try {
+    const data = getAggregateSpending(days);
+    spendingCache = { days, data, expiresAt: now + CACHE_TTL_MS };
+    return NextResponse.json(data);
+  } catch (err) {
+    if (isDbMissing(err)) return dbMissingResponse();
+    const msg = err instanceof Error ? err.message : "Unknown error";
+    return NextResponse.json({ error: msg }, { status: 500 });
+  }
 }

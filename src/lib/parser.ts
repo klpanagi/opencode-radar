@@ -15,6 +15,40 @@ export function getOpenCodeDb(): string {
   return join(homedir(), ".local", "share", "opencode", "opencode.db");
 }
 
+/** Code attached to errors thrown when the OpenCode database file is missing. */
+export const DB_NOT_FOUND_CODE = "DB_NOT_FOUND";
+
+/**
+ * Thrown by openDb() when the OpenCode database file does not exist.
+ * Carries a stable `code` ("DB_NOT_FOUND") so API routes can distinguish a
+ * missing database from real errors and respond with 503 instead of 500.
+ */
+export class DbNotFoundError extends Error {
+  readonly code: string = DB_NOT_FOUND_CODE;
+  readonly dbPath: string;
+
+  constructor(dbPath: string) {
+    super(`OpenCode database not found at ${dbPath}. Have you run opencode at least once?`);
+    this.name = "DbNotFoundError";
+    this.dbPath = dbPath;
+  }
+}
+
+/** True when `err` is the typed missing-database error (or carries its code). */
+export function isDbNotFoundError(err: unknown): err is DbNotFoundError {
+  return err instanceof Error && (err as Error & { code?: unknown }).code === DB_NOT_FOUND_CODE;
+}
+
+/** Absolute path to the OpenCode database file. */
+export function getDbPath(): string {
+  return getOpenCodeDb();
+}
+
+/** Whether the OpenCode database file exists on disk right now. */
+export function isDbAvailable(): boolean {
+  return existsSync(getOpenCodeDb());
+}
+
 export function getInsightsDir(): string {
   const xdg = process.env.XDG_DATA_HOME;
   const base = xdg
@@ -33,7 +67,7 @@ function openDb(): Database.Database {
   if (_db) return _db;
   const path = getOpenCodeDb();
   if (!existsSync(path)) {
-    throw new Error(`OpenCode database not found at ${path}. Have you run opencode at least once?`);
+    throw new DbNotFoundError(path);
   }
   _db = new Database(path, { readonly: true, fileMustExist: true });
   applyReadOnlyPragmas(_db);

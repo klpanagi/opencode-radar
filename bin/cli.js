@@ -94,6 +94,20 @@ if (!fs.existsSync(nextDir)) {
   }
 }
 
+function getOpenCodeDbPath() {
+  if (process.env.XDG_DATA_HOME) return path.join(process.env.XDG_DATA_HOME, "opencode", "opencode.db");
+  if (process.platform === "darwin") {
+    return path.join(os.homedir(), "Library", "Application Support", "opencode", "opencode.db");
+  }
+  return path.join(os.homedir(), ".local", "share", "opencode", "opencode.db");
+}
+
+const dbPath = getOpenCodeDbPath();
+if (!fs.existsSync(dbPath)) {
+  console.warn(`\n  Warning: OpenCode database not found at ${dbPath}.`);
+  console.warn("  Have you run opencode at least once?");
+  console.warn("  Radar will still start; the UI will show a banner until the database appears.\n");
+}
 const url = `http://localhost:${port}`;
 console.log(`\n  OpenCode Radar`);
 console.log(`  Ready at ${url}\n`);

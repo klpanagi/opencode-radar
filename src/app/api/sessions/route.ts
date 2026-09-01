@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { listProjects, getSessionData, ProjectInfo } from "@/lib/parser";
+import { dbMissingResponse, isDbMissing } from "@/lib/api";
 
 export const dynamic = "force-dynamic";
 
@@ -57,6 +58,7 @@ export async function GET(request: Request) {
       };
       return NextResponse.json(lite);
     } catch (err) {
+      if (isDbMissing(err)) return dbMissingResponse();
       const msg = err instanceof Error ? err.message : "Unknown error";
       return NextResponse.json({ error: msg }, { status: 500 });
     }
@@ -71,6 +73,7 @@ export async function GET(request: Request) {
     projectsCache = { data: projects, expiresAt: now + PROJECTS_CACHE_TTL_MS };
     return NextResponse.json(projects);
   } catch (err) {
+    if (isDbMissing(err)) return dbMissingResponse();
     const msg = err instanceof Error ? err.message : "Unknown error";
     return NextResponse.json({ error: msg }, { status: 500 });
   }
