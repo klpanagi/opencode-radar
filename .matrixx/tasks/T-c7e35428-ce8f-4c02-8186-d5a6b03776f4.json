@@ -1,0 +1,10 @@
+{
+  "id": "T-c7e35428-ce8f-4c02-8186-d5a6b03776f4",
+  "subject": "Create shared 503 helper src/lib/api.ts",
+  "description": "dbMissingPayload, isDbMissing (warn once), dbMissingResponse helpers for API routes",
+  "status": "completed",
+  "activeForm": "Creating shared 503 helper",
+  "blocks": [],
+  "blockedBy": [],
+  "threadID": "ses_fa2d7baf2ffeNFm91QUjkvTZ99"
+}

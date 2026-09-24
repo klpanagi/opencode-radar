@@ -1,0 +1,10 @@
+{
+  "id": "T-1f316a0f-d213-4ac9-a090-e1125d8ebbcf",
+  "subject": "Update 5 DB-dependent API routes to return 503",
+  "description": "sessions, active, spending, search, git-diff routes catch DB_NOT_FOUND -> 503 JSON {error, dbPath, hint}",
+  "status": "completed",
+  "activeForm": "Updating API routes",
+  "blocks": [],
+  "blockedBy": [],
+  "threadID": "ses_fa2d7baf2ffeNFm91QUjkvTZ99"
+}

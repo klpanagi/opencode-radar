@@ -1,0 +1,10 @@
+{
+  "id": "T-2a18f1ff-5bf0-48c0-8b5a-d2309d085fd0",
+  "subject": "Read all target files (parser.ts, API routes, page.tsx, cli.js)",
+  "description": "Read src/lib/parser.ts, all src/app/api/*/route.ts, src/app/page.tsx, bin/cli.js fully before editing",
+  "status": "pending",
+  "activeForm": "Reading all target files",
+  "blocks": [],
+  "blockedBy": [],
+  "threadID": "ses_fa2d7baf2ffeNFm91QUjkvTZ99"
+}

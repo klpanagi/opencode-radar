@@ -1,0 +1,17 @@
+{
+  "taskId": "bg_695929bc",
+  "parentSessionID": "ses_f2bc12a86ffe9FB6lB3NxOWuD5",
+  "parentMessageID": "msg_0d43f63ac001eyZA0P1l0uAWmb",
+  "description": "Check framework integration pitfalls",
+  "agent": "operator",
+  "status": "completed",
+  "sessionID": "ses_f2bc05494ffe7eh0CsEBLOr7ma",
+  "model": {
+    "providerID": "opencode",
+    "modelID": "space-bunny-free"
+  },
+  "concurrencyGroup": "opencode/space-bunny-free",
+  "queuedAt": 1790267337576,
+  "startedAt": 1790267337581,
+  "completedAt": 1790268296483
+}

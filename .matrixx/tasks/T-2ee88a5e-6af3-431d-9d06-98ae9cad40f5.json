@@ -1,0 +1,10 @@
+{
+  "id": "T-2ee88a5e-6af3-431d-9d06-98ae9cad40f5",
+  "subject": "page.tsx: DB-missing banner + polling guards",
+  "description": "Detect 503/dbPath responses, show banner, stop polling, fix infinite session loading",
+  "status": "completed",
+  "activeForm": "Adding DB-missing banner to page.tsx",
+  "blocks": [],
+  "blockedBy": [],
+  "threadID": "ses_fa2d7baf2ffeNFm91QUjkvTZ99"
+}

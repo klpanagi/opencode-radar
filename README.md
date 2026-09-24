@@ -174,6 +174,8 @@ npm run electron:build     # build unpacked Electron app
 npm run electron:dist      # build platform-specific installer
 ```
 
+`better-sqlite3` is a native module with different binaries for Node.js and Electron. The development and server scripts automatically rebuild it for Node.js, while the Electron packaging scripts rebuild it for Electron before packaging and restore the Node.js binary afterward. This keeps `electron:dev` and packaged builds using the correct runtime binary without manual cleanup between workflows.
+
 ---
 
 ## Tech Stack

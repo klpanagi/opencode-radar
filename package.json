@@ -23,18 +23,23 @@
     "postcss.config.mjs"
   ],
   "scripts": {
+    "native:node": "npm rebuild better-sqlite3",
+    "native:electron": "electron-rebuild -f -w better-sqlite3",
+    "predev": "npm run native:node",
     "dev": "next dev --turbopack -p ${PORT:-3141}",
+    "prebuild": "npm run native:node",
     "build": "next build",
+    "prestart": "npm run native:node",
     "start": "next start -p ${PORT:-3141}",
     "lint": "next lint",
     "prod": "next build && next start -p ${PORT:-3141}",
     "electron:dev": "concurrently -n next,electron -c cyan,green --kill-others-on-fail \"npm run dev\" \"electron .\"",
     "electron:prod": "npm run build && concurrently -n next,electron -c cyan,green --kill-others-on-fail \"npm run start\" \"electron .\"",
-    "electron:build": "npm run build && electron-rebuild -f -w better-sqlite3 && electron-builder --dir",
-    "electron:dist": "npm run build && electron-rebuild -f -w better-sqlite3 && electron-builder",
-    "electron:dist:mac": "npm run build && electron-rebuild -f -w better-sqlite3 && electron-builder --mac",
-    "electron:dist:linux": "npm run build && electron-rebuild -f -w better-sqlite3 && electron-builder --linux",
-    "electron:dist:win": "npm run build && electron-rebuild -f -w better-sqlite3 && electron-builder --win"
+    "electron:build": "npm run build && npm run native:electron && electron-builder --dir && npm run native:node",
+    "electron:dist": "npm run build && npm run native:electron && electron-builder && npm run native:node",
+    "electron:dist:mac": "npm run build && npm run native:electron && electron-builder --mac && npm run native:node",
+    "electron:dist:linux": "npm run build && npm run native:electron && electron-builder --linux && npm run native:node",
+    "electron:dist:win": "npm run build && npm run native:electron && electron-builder --win && npm run native:node"
   },
   "build": {
     "appId": "io.opencode.radar",
