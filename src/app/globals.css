@@ -100,6 +100,14 @@ body {
   animation: spin-slow 3s linear infinite;
 }
 
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-fade-up {
+  animation: fade-up 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
 /* Line clamp utilities */
 .line-clamp-2 {
   display: -webkit-box;

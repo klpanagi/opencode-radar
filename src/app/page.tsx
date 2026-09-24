@@ -6,22 +6,17 @@ import { useTheme } from "@/lib/useTheme";
 import { useBudget } from "@/lib/useBudget";
 import { useBookmarks } from "@/lib/useBookmarks";
 import { useGitDiff } from "@/lib/useGitDiff";
-import { CostCard } from "@/components/CostCard";
-import { CostChart } from "@/components/CostChart";
-import { ModelBreakdown } from "@/components/ModelBreakdown";
-import { ToolUsage } from "@/components/ToolUsage";
+import { SessionOverview } from "@/components/session/SessionOverview";
 import { AgentPanel } from "@/components/AgentPanel";
 import { SessionPicker } from "@/components/SessionPicker";
 import { SessionSearch } from "@/components/SessionSearch";
 import { ConversationTimeline } from "@/components/ConversationTimeline";
 import { FileHeatmap } from "@/components/FileHeatmap";
-import { CostPerTurnChart } from "@/components/CostPerTurn";
 import { SpendingSummary } from "@/components/SpendingSummary";
 import { LiveFeed } from "@/components/LiveFeed";
 import { MissionControl } from "@/components/MissionControl";
 import { BudgetSettings } from "@/components/BudgetSettings";
 import { BudgetBadge } from "@/components/BudgetBadge";
-import { ContextBar } from "@/components/ContextBar";
 import { ConfigPanel } from "@/components/ConfigPanel";
 import { CopyResumeButton } from "@/components/CopyResumeButton";
 import { ExportButton } from "@/components/ExportButton";
@@ -384,39 +379,19 @@ export default function Dashboard() {
               </div>
             </div>
 
-            {/* Row 1: Cost + Cost Over Time */}
-            <div className="mb-5 grid grid-cols-12 gap-5">
-              <div className="col-span-4">
-                <CostCard
-                  totalCost={session.totalCost}
-                  totalTokens={session.totalTokens}
-                  fileActivity={session.fileActivity}
-                  gitInsertions={gitData?.insertions}
-                  gitDeletions={gitData?.deletions}
-                />
-              </div>
-              <div className="col-span-8 rounded-xl border border-[var(--border)] bg-[var(--bg-card)] p-5">
-                <div className="mb-3 text-xs uppercase tracking-wider text-[var(--text-secondary)]">
-                  Cost Over Time
-                </div>
-                <div className="h-48">
-                  <CostChart data={session.costOverTime} />
-                </div>
-              </div>
+            {/* Session Overview Dashboard */}
+            <SessionOverview session={session} />
+
+            {/* Deep-dive panels */}
+            <div className="mb-5 mt-9 flex items-center gap-3">
+              <span className="h-7 w-1.5 rounded-full bg-[var(--accent-blue)]" />
+              <h3 className="text-xs font-bold uppercase tracking-wider text-[var(--text-secondary)]">
+                Deep Dive
+              </h3>
+              <div className="h-px flex-1 bg-[var(--border)]" />
             </div>
 
-            {/* Row 2: Context Window */}
-            {session.contextSnapshots.length > 0 && (
-              <div className="mb-5 rounded-xl border border-[var(--border)] bg-[var(--bg-card)] p-5">
-                <ContextBar
-                  snapshots={session.contextSnapshots}
-                  compactions={session.compactions}
-                  contextLimit={session.contextLimit}
-                />
-              </div>
-            )}
-
-            {/* Row 3: Conversation Timeline */}
+            {/* Conversation Timeline */}
             <div className="mb-5 rounded-xl border border-[var(--border)] bg-[var(--bg-card)] p-5">
               <div className="mb-4 text-xs uppercase tracking-wider text-[var(--text-secondary)]">
                 Conversation Timeline
@@ -424,29 +399,6 @@ export default function Dashboard() {
               <ConversationTimeline events={session.timeline} />
             </div>
 
-            {/* Row 4: Cost Per Turn */}
-            <div className="mb-5 rounded-xl border border-[var(--border)] bg-[var(--bg-card)] p-5">
-              <div className="mb-4 text-xs uppercase tracking-wider text-[var(--text-secondary)]">
-                Cost Per Turn
-              </div>
-              <CostPerTurnChart turns={session.costPerTurn} />
-            </div>
-
-            {/* Row 5: Model + Tools */}
-            <div className="mb-5 grid grid-cols-12 gap-5">
-              <div className="col-span-5 rounded-xl border border-[var(--border)] bg-[var(--bg-card)] p-5">
-                <div className="mb-4 text-xs uppercase tracking-wider text-[var(--text-secondary)]">
-                  Model Breakdown
-                </div>
-                <ModelBreakdown breakdown={session.modelBreakdown} />
-              </div>
-              <div className="col-span-7 rounded-xl border border-[var(--border)] bg-[var(--bg-card)] p-5">
-                <div className="mb-4 text-xs uppercase tracking-wider text-[var(--text-secondary)]">
-                  Tool Usage
-                </div>
-                <ToolUsage usage={session.toolUsage} />
-              </div>
-            </div>
 
             {/* Row 6: File Heatmap */}
             <div className="mb-5 rounded-xl border border-[var(--border)] bg-[var(--bg-card)] p-5">
